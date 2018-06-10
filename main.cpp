@@ -97,9 +97,11 @@ int main()
 			std::cout << std::endl << std::endl;
 
 			std::string ss_origin = "E:/railway_safety/output_data/foreign_object_" + std::to_string(i) + ".pcd";
-			pcl::io::savePCDFile(ss_origin, *foreign_objects[i].origin_cloud);
+			if (foreign_objects[i].origin_cloud->size() > 0)
+				pcl::io::savePCDFile(ss_origin, *foreign_objects[i].origin_cloud);
 			std::string ss_above = "E:/railway_safety/output_data/foreign_object_above_" + std::to_string(i) + ".pcd";
-			pcl::io::savePCDFile(ss_above, *foreign_objects[i].above_cloud);
+			if (foreign_objects[i].above_cloud->size() > 0)
+				pcl::io::savePCDFile(ss_above, *foreign_objects[i].above_cloud);
 
 			std::cout << "Foreign Cloud " << i << " has been saved.\n";
 			std::cout << "The size of the foreign cloud is " << foreign_objects[i].origin_cloud->size() << std::endl;
@@ -108,7 +110,8 @@ int main()
 			std::cout << "area : " << foreign_objects[i].area << std::endl;
 			std::cout << "Height above the railway plane is " << foreign_objects[i].height << "m.\n";
 			std::cout << "The position of foreign object is " << foreign_objects[i].position << "\n";
-			std::cout << "The distance between foreign object and railway is " << foreign_objects[i].distance << "m\n";	
+			if (foreign_objects[i].position != 2)
+				std::cout << "The distance between foreign object and railway is " << foreign_objects[i].distance << "m\n";	
 		}
 	}
 	else

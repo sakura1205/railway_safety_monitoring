@@ -151,12 +151,15 @@ std::vector<ForeignObject> SafetyMonitoring::GetForeignObject(CloudPtr foreign_r
 		}
 		
 		//计算异物水平投影面积
-		GetBound(foreign_object.above_cloud, &foreign_object.bound);
+		GetBound(foreign_object.origin_cloud, &foreign_object.bound);
 		foreign_object.area = GetObjectArea(foreign_object.origin_cloud);
 		
 		//判断异物位置，并计算与最近铁轨的距离
 		GetObjectPosition(foreign_object, railway_rects_, railway_cloud);
-		foreign_objects.push_back(foreign_object);
+
+		//异物包含超出轨面7cm的点则报警
+		if (foreign_object.above_cloud->size() > 0)
+			foreign_objects.push_back(foreign_object);
 	}
 	return foreign_objects;
 }
