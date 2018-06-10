@@ -96,24 +96,7 @@ CloudPtr SafetyMonitoring::RefineForeignRegion(CloudPtr ref_cloud, CloudPtr com_
 			*foreign_region += *temp_cloud;
 		}
 	}
-// 	for (int i = 0; i < region.corners.size(); i += 2)
-// 	{
-// 		for (int j = 0; j < region.corners[i].size()-1; ++j)
-// 		{
-// 			std::vector<Point> rectangle;
-// 			Point p1 = region.corners[i][j];
-// 			Point p2 = region.corners[i][j + 1];
-// 			Point p3 = region.corners[i + 1][j];
-// 			Point p4 = region.corners[i + 1][j + 1];
-// 			rectangle.push_back(p1);
-// 			rectangle.push_back(p2);
-// 			rectangle.push_back(p3);
-// 			rectangle.push_back(p4);
-// 			CloudPtr temp_cloud(new Cloud);
-// 			GetWithinCloud(com_within_cloud, temp_cloud, rectangle, region.distance);
-// 			*foreign_region += *temp_cloud;
-// 		}
-// 	}
+
 	pcl::io::savePCDFile("E:/foreign_region.pcd", *com_within_cloud);
 	pcl::io::savePCDFile("E:/foreign_region_within.pcd", *foreign_region);
 	return foreign_region;
@@ -140,36 +123,36 @@ std::vector<ForeignObject> SafetyMonitoring::GetForeignObject(CloudPtr foreign_r
 	for (int i = 0; i < cluster_indices.size(); ++i)
 	{
 		ForeignObject foreign_object;
-		CloudPtr foreign_object_cloud(new Cloud);
-		pcl::copyPointCloud(*foreign_region, cluster_indices[i], *foreign_object_cloud);
-		pcl::io::savePCDFile("E:/foreign_object_cloud.pcd", *foreign_object_cloud);
+		
+		pcl::copyPointCloud(*foreign_region, cluster_indices[i], *foreign_object.origin_cloud);
+		pcl::io::savePCDFile("E:/foreign_object_cloud.pcd", *foreign_object.origin_cloud);
 
 		//求异物在XOY平面的中心
 		float average_x = 0.0;
 		float average_y = 0.0;
-		for (int i = 0; i < foreign_object_cloud->size(); ++i)
+		for (int i = 0; i < foreign_object.origin_cloud->size(); ++i)
 		{
-			average_x += foreign_object_cloud->points[i].x;
-			average_y += foreign_object_cloud->points[i].y;
+			average_x += foreign_object.origin_cloud->points[i].x;
+			average_y += foreign_object.origin_cloud->points[i].y;
 		}
-		foreign_object.center_x = average_x / foreign_object_cloud->size();
-		foreign_object.center_y = average_y / foreign_object_cloud->size();
+		foreign_object.center_x = average_x / foreign_object.origin_cloud->size();
+		foreign_object.center_y = average_y / foreign_object.origin_cloud->size();
 
 		//剔除异物中低于轨面7cm的点，并计算最高点超出轨面高度
-		for (int i = 0; i < foreign_object_cloud->size(); ++i)
+		for (int i = 0; i < foreign_object.origin_cloud->size(); ++i)
 		{
-			float height = ComputeVerticalDistanceToPlane(foreign_object_cloud->points[i], railway_rects_);
+			float height = ComputeVerticalDistanceToPlane(foreign_object.origin_cloud->points[i], railway_rects_);
 			
 			if (height > 0.07)
 			{
-				foreign_object.cloud->push_back(foreign_object_cloud->points[i]);
+				foreign_object.above_cloud->push_back(foreign_object.origin_cloud->points[i]);
 				foreign_object.height = foreign_object.height > height ? foreign_object.height : height;
 			}
 		}
 		
 		//计算异物水平投影面积
-		GetBound(foreign_object.cloud, &foreign_object.bound);
-		foreign_object.area = GetObjectArea(foreign_object.cloud);
+		GetBound(foreign_object.above_cloud, &foreign_object.bound);
+		foreign_object.area = GetObjectArea(foreign_object.origin_cloud);
 		
 		//判断异物位置，并计算与最近铁轨的距离
 		GetObjectPosition(foreign_object, railway_rects_, railway_cloud);
@@ -290,8 +273,8 @@ void SafetyMonitoring::GetObjectPosition(ForeignObject& foreign_object, std::vec
 				float b_min = railway_rects[i][j].parallel_line_para.b_min;
 	
 				CloudPtr foreign_cloud(new Cloud);
-				float distance_1 = ComputeDistanceFromCloudToLine(foreign_object.cloud, k, b_min);
-				float distance_2 = ComputeDistanceFromCloudToLine(foreign_object.cloud, k, b_max);
+				float distance_1 = ComputeDistanceFromCloudToLine(foreign_object.above_cloud, k, b_min);
+				float distance_2 = ComputeDistanceFromCloudToLine(foreign_object.above_cloud, k, b_max);
 
 				if (distance_1 < distance_2)
 				{

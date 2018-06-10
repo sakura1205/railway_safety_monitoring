@@ -24,14 +24,6 @@ int main()
 		std::cout << "实时点云加载成功.\n\n";
 	else
 		std::cout << "实时点云加载失败.\n\n";
-
-	std::cout << "输入铁轨点云:\n";
-	std::cin >> railway_cloud_path;
-	if (!pcl::io::loadPCDFile(railway_cloud_path, *railway_cloud))
-		std::cout << "铁轨点云加载成功.\n\n";
-	else
-		std::cout << "铁轨点云加载失败.\n\n";
-
 	
 	//计算铁轨条数(txt文件行数)
 	Region region;
@@ -103,10 +95,14 @@ int main()
 		for (int i = 0; i < foreign_objects.size(); ++i)
 		{
 			std::cout << std::endl << std::endl;
-			std::string ss = "E:/railway_safety/output_data/foreign_object_" + std::to_string(i) + ".pcd";
-			pcl::io::savePCDFile(ss, *foreign_objects[i].cloud);
+
+			std::string ss_origin = "E:/railway_safety/output_data/foreign_object_" + std::to_string(i) + ".pcd";
+			pcl::io::savePCDFile(ss_origin, *foreign_objects[i].origin_cloud);
+			std::string ss_above = "E:/railway_safety/output_data/foreign_object_above_" + std::to_string(i) + ".pcd";
+			pcl::io::savePCDFile(ss_above, *foreign_objects[i].above_cloud);
+
 			std::cout << "Foreign Cloud " << i << " has been saved.\n";
-			std::cout << "The size of the foreign cloud is " << foreign_objects[i].cloud->size() << std::endl;
+			std::cout << "The size of the foreign cloud is " << foreign_objects[i].origin_cloud->size() << std::endl;
 			std::cout << "center_x : " << foreign_objects[i].center_x << std::endl;
 			std::cout << "center_y : " << foreign_objects[i].center_y<< std::endl;
 			std::cout << "area : " << foreign_objects[i].area << std::endl;

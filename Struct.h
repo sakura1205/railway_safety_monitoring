@@ -35,7 +35,8 @@ struct Bound
 
 struct ForeignObject
 {
-	CloudPtr cloud;
+	CloudPtr origin_cloud; //提取出的异物点云
+	CloudPtr above_cloud; //超出轨面的点云
 	Bound bound;
 	float center_x;
 	float center_y;
@@ -45,7 +46,7 @@ struct ForeignObject
 	int position; //一对铁轨由近及远分别为1,2,3,4,5,6（2,5分别位于铁轨上）
 	float distance; //相对最近邻铁轨的垂直距离（位于铁轨上时为0）
 	
-	ForeignObject() :cloud(new Cloud)
+	ForeignObject() :origin_cloud(new Cloud), above_cloud(new Cloud)
 	{
 		position = -1;
 		height = -FLT_MAX;
