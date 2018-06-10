@@ -7,8 +7,9 @@ int main()
 	/*读入原始点云数据;*/
 	CloudPtr ref_cloud(new Cloud);
 	CloudPtr com_cloud(new Cloud);
+	CloudPtr railway_cloud(new Cloud);
 
-	std::string reference_cloud_path, compared_cloud_path;
+	std::string reference_cloud_path, compared_cloud_path,railway_cloud_path;
 	
 	std::cout << "输入基准点云：\n";
 	std::cin >> reference_cloud_path;
@@ -24,40 +25,77 @@ int main()
 	else
 		std::cout << "实时点云加载失败.\n\n";
 
-	float x_1 = 8.60978, y_1 = 1.55716;
-	float x_2 = 11.7662, y_2 = 1.60929;
-	float x_3 = 13.1423, y_3 = 1.4075;
-	float x_4 = 9.88809, y_4 = 1.50581;
-	float nx = -0.02700101, ny = -0.99931675;
-	float vertical_x1 = 13.137211, vertical_y1 = 2.707609;
-	float vertical_x2 = 13.144015, vertical_y2 = 0.666721;
-	float parallel_distance = 0.35;
-	float vertical_distance = 0.1;
+	std::cout << "输入铁轨点云:\n";
+	std::cin >> railway_cloud_path;
+	if (!pcl::io::loadPCDFile(railway_cloud_path, *railway_cloud))
+		std::cout << "铁轨点云加载成功.\n\n";
+	else
+		std::cout << "铁轨点云加载失败.\n\n";
 
-	RailwayParameters rp;
-	rp.parallel_distance = parallel_distance;
-	rp.vertical_distance = vertical_distance;
-	rp.parallel_x.push_back(x_1);
-	rp.parallel_x.push_back(x_2);
-	rp.parallel_x.push_back(x_3);
-	rp.parallel_x.push_back(x_4);
-	rp.parallel_y.push_back(y_1);
-	rp.parallel_y.push_back(y_2);
-	rp.parallel_y.push_back(y_3);
-	rp.parallel_y.push_back(y_4);
-	rp.vertical_x1 = vertical_x1;
-	rp.vertical_y1 = vertical_y1;
-	rp.vertical_x2 = vertical_x2;
-	rp.vertical_y2 = vertical_y2;
-	rp.nx = nx;
-	rp.ny = ny;
+	
+	//计算铁轨条数(txt文件行数)
+	Region region;
+	std::string txt_path;
+	std::cout << "输入铁轨数据：\n";
+	std::cin >> txt_path;
+ 	std::fstream ifs(txt_path);
+	std::string line;
+	if (ifs)
+	{
+		while (std::getline(ifs, line))
+		{
+			++region.count;
+		}
+	}
+ 	ifs.clear();
+ 	ifs.seekg(0, std::ios::beg);
+	
+ 	//读入初始区域包围盒region.vertexes和铁轨转点region.corners(3×n）
+ 	float temp_data;
+ 	std::vector<float> temp_vector;
+	
+ 	while (!ifs.eof())
+ 	{
+ 		ifs >> temp_data;
+ 		temp_vector.push_back(temp_data);
+ 	}
+	int pt_count_per_railway = (temp_vector.size() - 8) / region.count;  //每条铁轨上的点个数
 
+ 	Point point;
+	for (int i = 0; i < 8; i += 2)
+	{
+		point.x = temp_vector[i];
+		point.y = temp_vector[i + 1];
+		region.vertexes.push_back(point);
+	}	
+ 	for (int i = 0; i < region.count; ++i)
+ 	{
+ 		std::vector<Point> single_railway;
+		for (int j = 8; j < 8 + pt_count_per_railway; j += 3)
+ 		{
+			point.x = temp_vector[i*pt_count_per_railway + j];
+			point.y = temp_vector[i*pt_count_per_railway + j + 1];
+			point.z = temp_vector[i*pt_count_per_railway + j + 2];
+ 			single_railway.push_back(point);
+ 		}
+ 		region.corners.push_back(single_railway);
+ 	}
 
-	/*寻找异物点;*/
+// 	for (int i = 0; i < region.corners.size(); ++i)
+// 	{
+// 		for (int j = 0; j < region.corners[i].size(); ++j)
+// 		{
+// 			std::cout << region.corners[i][j].x << " " << region.corners[i][j].y << " " << region.corners[i][j].z << std::endl;
+// 		}
+// 		std::cout << std::endl << std::endl;
+// 	}
+
+	/*寻找异物点;*/	
 	SafetyMonitoring sm;
+	std::vector<std::vector<RailwayRect>> raileway_rects;
 	CloudPtr foreign_region(new Cloud);
-	foreign_region = sm.RefineForeignRegion(ref_cloud, com_cloud,rp);
-	std::vector<ForeignObject> foreign_objects = sm.GetForeignObject(foreign_region);
+	foreign_region = sm.RefineForeignRegion(ref_cloud, com_cloud,region);
+	std::vector<ForeignObject> foreign_objects = sm.GetForeignObject(foreign_region,railway_cloud);
 	
 	/*输出异物点点云、水平投影外包框及高度;*/
 	if (foreign_objects.size())
@@ -69,11 +107,12 @@ int main()
 			pcl::io::savePCDFile(ss, *foreign_objects[i].cloud);
 			std::cout << "Foreign Cloud " << i << " has been saved.\n";
 			std::cout << "The size of the foreign cloud is " << foreign_objects[i].cloud->size() << std::endl;
-			std::cout << "min_x : " << foreign_objects[i].bound.min_x << std::endl;
-			std::cout << "max_x : " << foreign_objects[i].bound.max_x << std::endl;
-			std::cout << "min_y : " << foreign_objects[i].bound.min_y << std::endl;
-			std::cout << "max_y : " << foreign_objects[i].bound.max_y << std::endl;
-			std::cout << "Height of the foreign cloud is " << foreign_objects[i].height << "m.\n";
+			std::cout << "center_x : " << foreign_objects[i].center_x << std::endl;
+			std::cout << "center_y : " << foreign_objects[i].center_y<< std::endl;
+			std::cout << "area : " << foreign_objects[i].area << std::endl;
+			std::cout << "Height above the railway plane is " << foreign_objects[i].height << "m.\n";
+			std::cout << "The position of foreign object is " << foreign_objects[i].position << "\n";
+			std::cout << "The distance between foreign object and railway is " << foreign_objects[i].distance << "m\n";	
 		}
 	}
 	else
