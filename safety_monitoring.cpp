@@ -17,7 +17,7 @@ SafetyMonitoring::~SafetyMonitoring()
 
 }
 
-void SafetyMonitoring::FindForeignRegion(CloudPtr ref_cloud, CloudPtr com_cloud, float resolution,CloudPtr ref_foreign_region,CloudPtr com_foreign_region)
+void SafetyMonitoring::FindForeignRegion(CloudPtr ref_cloud, CloudPtr com_cloud, float resolution, CloudPtr ref_foreign_region, CloudPtr com_foreign_region)
 {
 	//计算格网边界
 	Bound* bound = new Bound();
@@ -32,7 +32,7 @@ void SafetyMonitoring::FindForeignRegion(CloudPtr ref_cloud, CloudPtr com_cloud,
 	Voxel* ref_grid = new Voxel[voxel_count];
 	Voxel* com_grid = new Voxel[voxel_count];
 
-	InitialGrid(ref_cloud, com_cloud, ref_grid, com_grid, resolution,bound->min_x,bound->min_y,bound->max_x,bound->max_y,list);
+	InitialGrid(ref_cloud, com_cloud, ref_grid, com_grid, resolution, bound->min_x, bound->min_y, bound->max_x, bound->max_y, list);
 
 	std::vector<int> region_voxel_id;
 
@@ -42,7 +42,7 @@ void SafetyMonitoring::FindForeignRegion(CloudPtr ref_cloud, CloudPtr com_cloud,
 		if ((com_grid[i].max_z - ref_grid[i].max_z) > height_diff_thres_)
 		{
 			region_voxel_id.push_back(i);
-		}			
+		}
 	}
 
 	//计算异物点点云
@@ -63,28 +63,28 @@ void SafetyMonitoring::FindForeignRegion(CloudPtr ref_cloud, CloudPtr com_cloud,
 	std::vector<int>().swap(com_foreign_region_point_id);
 }
 
-CloudPtr SafetyMonitoring::RefineForeignRegion(CloudPtr ref_cloud, CloudPtr com_cloud,Region region)
+CloudPtr SafetyMonitoring::RefineForeignRegion(CloudPtr ref_cloud, CloudPtr com_cloud, Region region)
 {
 	//截取待检测初始范围内的点云
 	CloudPtr ref_within_cloud(new Cloud);
 	CloudPtr com_within_cloud(new Cloud);
-	GetWithinCloud(ref_cloud, ref_within_cloud,region.vertexes,0);
-	GetWithinCloud(com_cloud, com_within_cloud, region.vertexes,0);
- 	pcl::io::savePCDFile("E:/com_within_cloud.pcd", *com_within_cloud);
- 	pcl::io::savePCDFile("E:/ref_within_cloud.pcd", *ref_within_cloud);
+	GetWithinCloud(ref_cloud, ref_within_cloud, region.vertexes, 0);
+	GetWithinCloud(com_cloud, com_within_cloud, region.vertexes, 0);
+	pcl::io::savePCDFile("E:/com_within_cloud.pcd", *com_within_cloud);
+	pcl::io::savePCDFile("E:/ref_within_cloud.pcd", *ref_within_cloud);
 
 	//寻找异物区域
 	for (float resolution = initial_resolution_; resolution > final_resolution_; resolution /= 2)
 	{
 		CloudPtr ref_foreign_region(new Cloud);
 		CloudPtr com_foreign_region(new Cloud);
-		FindForeignRegion(ref_within_cloud, com_within_cloud,resolution,ref_foreign_region,com_foreign_region);
+		FindForeignRegion(ref_within_cloud, com_within_cloud, resolution, ref_foreign_region, com_foreign_region);
 		ref_within_cloud = ref_foreign_region;
- 		com_within_cloud = com_foreign_region;
+		com_within_cloud = com_foreign_region;
 	}
 
 	ComputeRailwayRectangle(region, railway_rects_);
-	
+
 	//判断异物区域是否在铁轨两侧30cm范围内
 	CloudPtr foreign_region(new Cloud);
 	for (int i = 0; i < railway_rects_.size(); ++i)
@@ -102,7 +102,7 @@ CloudPtr SafetyMonitoring::RefineForeignRegion(CloudPtr ref_cloud, CloudPtr com_
 	return foreign_region;
 }
 
-std::vector<ForeignObject> SafetyMonitoring::GetForeignObject(CloudPtr foreign_region,CloudPtr railway_cloud)
+std::vector<ForeignObject> SafetyMonitoring::GetForeignObject(CloudPtr foreign_region, CloudPtr railway_cloud)
 {
 	std::vector<ForeignObject> foreign_objects;
 
@@ -123,7 +123,7 @@ std::vector<ForeignObject> SafetyMonitoring::GetForeignObject(CloudPtr foreign_r
 	for (int i = 0; i < cluster_indices.size(); ++i)
 	{
 		ForeignObject foreign_object;
-		
+
 		pcl::copyPointCloud(*foreign_region, cluster_indices[i], *foreign_object.origin_cloud);
 		pcl::io::savePCDFile("E:/foreign_object_cloud.pcd", *foreign_object.origin_cloud);
 
@@ -142,18 +142,18 @@ std::vector<ForeignObject> SafetyMonitoring::GetForeignObject(CloudPtr foreign_r
 		for (int i = 0; i < foreign_object.origin_cloud->size(); ++i)
 		{
 			float height = ComputeVerticalDistanceToPlane(foreign_object.origin_cloud->points[i], railway_rects_);
-			
+
 			if (height > 0.07)
 			{
 				foreign_object.above_cloud->push_back(foreign_object.origin_cloud->points[i]);
 				foreign_object.height = foreign_object.height > height ? foreign_object.height : height;
 			}
 		}
-		
+
 		//计算异物水平投影面积
 		GetBound(foreign_object.origin_cloud, &foreign_object.bound);
 		foreign_object.area = GetObjectArea(foreign_object.origin_cloud);
-		
+
 		//判断异物位置，并计算与最近铁轨的距离
 		GetObjectPosition(foreign_object, railway_rects_, railway_cloud);
 
@@ -212,7 +212,7 @@ void SafetyMonitoring::GetWithinCloud(CloudPtr cloud, CloudPtr within_cloud, std
 		{
 			float temp_b_12 = cloud->points[i].x - k_12*cloud->points[i].y;
 			float temp_b_34 = cloud->points[i].x - k_34*cloud->points[i].y;
-			if (temp_b_12 > b_12_min-extend && temp_b_12 < b_12_max+extend && temp_b_34 > b_34_min && temp_b_34 < b_34_max)
+			if (temp_b_12 > b_12_min - extend && temp_b_12 < b_12_max + extend && temp_b_34 > b_34_min && temp_b_34 < b_34_max)
 			{
 				within_cloud->push_back(cloud->points[i]);
 			}
@@ -223,15 +223,15 @@ void SafetyMonitoring::GetWithinCloud(CloudPtr cloud, CloudPtr within_cloud, std
 void SafetyMonitoring::GetWithinCloud(CloudPtr cloud, CloudPtr within_cloud, RailwayRect railway_rect)
 {
 	for (int i = 0; i < cloud->size(); ++i)
+	{
+		float temp_b_12 = cloud->points[i].x - railway_rect.parallel_line_para.k*cloud->points[i].y;
+		float temp_b_34 = cloud->points[i].x - railway_rect.vertical_line_para.k*cloud->points[i].y;
+		if (temp_b_12 > railway_rect.parallel_line_para.b_min - railway_rect.extend && temp_b_12 < railway_rect.parallel_line_para.b_max + railway_rect.extend
+			&& temp_b_34 > railway_rect.vertical_line_para.b_min && temp_b_34 < railway_rect.vertical_line_para.b_max)
 		{
-			float temp_b_12 = cloud->points[i].x - railway_rect.parallel_line_para.k*cloud->points[i].y;
-			float temp_b_34 = cloud->points[i].x - railway_rect.vertical_line_para.k*cloud->points[i].y;
-			if (temp_b_12 > railway_rect.parallel_line_para.b_min - railway_rect.extend && temp_b_12 < railway_rect.parallel_line_para.b_max + railway_rect.extend
-				&& temp_b_34 > railway_rect.vertical_line_para.b_min && temp_b_34 < railway_rect.vertical_line_para.b_max)
-			{
-				within_cloud->push_back(cloud->points[i]);
-			}
+			within_cloud->push_back(cloud->points[i]);
 		}
+	}
 }
 
 bool SafetyMonitoring::IsOnRailway(CloudPtr foreign_cloud, CloudPtr railway_cloud)
@@ -259,7 +259,7 @@ bool SafetyMonitoring::IsOnRailway(CloudPtr foreign_cloud, CloudPtr railway_clou
 		return false;
 }
 
-void SafetyMonitoring::GetObjectPosition(ForeignObject& foreign_object, std::vector<std::vector<RailwayRect>> railway_rects,CloudPtr railway_cloud)
+void SafetyMonitoring::GetObjectPosition(ForeignObject& foreign_object, std::vector<std::vector<RailwayRect>> railway_rects, CloudPtr railway_cloud)
 {
 	for (int i = 0; i < railway_rects.size(); ++i)
 	{
@@ -274,7 +274,7 @@ void SafetyMonitoring::GetObjectPosition(ForeignObject& foreign_object, std::vec
 				float k = railway_rects[i][j].parallel_line_para.k;
 				float b_max = railway_rects[i][j].parallel_line_para.b_max;
 				float b_min = railway_rects[i][j].parallel_line_para.b_min;
-	
+
 				CloudPtr foreign_cloud(new Cloud);
 				float distance_1 = ComputeDistanceFromCloudToLine(foreign_object.above_cloud, k, b_min);
 				float distance_2 = ComputeDistanceFromCloudToLine(foreign_object.above_cloud, k, b_max);
@@ -298,7 +298,7 @@ float SafetyMonitoring::GetObjectArea(CloudPtr cloud, float resolution /*= 0.01*
 {
 	Bound* bound = new Bound;
 	GetBound(cloud, bound);
-	
+
 	//定义格网数组
 	int row = ceil((bound->max_x - bound->min_x) / resolution);
 	int list = ceil((bound->max_y - bound->min_y) / resolution);
@@ -373,16 +373,16 @@ bool SafetyMonitoring::IsInsideRect(float x, float y, RailwayRect railway_rect)
 
 bool SafetyMonitoring::IsInsideExtendedRect(float x, float y, RailwayRect railway_rect)
 {
-		float temp_b_12 = x - railway_rect.parallel_line_para.k*y;
-		float temp_b_34 = x - railway_rect.vertical_line_para.k*y;
-		if (temp_b_12 > railway_rect.parallel_line_para.b_min - railway_rect.extend && temp_b_12 < railway_rect.parallel_line_para.b_max + railway_rect.extend
-			&& temp_b_34 > railway_rect.vertical_line_para.b_min && temp_b_34 < railway_rect.vertical_line_para.b_max)
-			return true;
-		else
-			return false;
+	float temp_b_12 = x - railway_rect.parallel_line_para.k*y;
+	float temp_b_34 = x - railway_rect.vertical_line_para.k*y;
+	if (temp_b_12 > railway_rect.parallel_line_para.b_min - railway_rect.extend && temp_b_12 < railway_rect.parallel_line_para.b_max + railway_rect.extend
+		&& temp_b_34 > railway_rect.vertical_line_para.b_min && temp_b_34 < railway_rect.vertical_line_para.b_max)
+		return true;
+	else
+		return false;
 }
 
-float SafetyMonitoring::ComputeDistanceFromPointToLine(float x, float y, float k,float b)
+float SafetyMonitoring::ComputeDistanceFromPointToLine(float x, float y, float k, float b)
 {
 	return fabs(k*y - x + b) / sqrt(1 + k*k);
 }
@@ -410,7 +410,7 @@ void SafetyMonitoring::GetBound(CloudPtr cloud, Bound* bound)
 	bound->max_z = max_pt[2];
 }
 
-void SafetyMonitoring::InitialGrid(CloudPtr ref_cloud,CloudPtr com_cloud, Voxel* ref_grid,Voxel* com_grid,float resolution,float min_x,float min_y,float max_x,float max_y,int list)
+void SafetyMonitoring::InitialGrid(CloudPtr ref_cloud, CloudPtr com_cloud, Voxel* ref_grid, Voxel* com_grid, float resolution, float min_x, float min_y, float max_x, float max_y, int list)
 {
 	for (int i = 0; i < ref_cloud->size(); ++i)
 	{
@@ -473,15 +473,15 @@ void SafetyMonitoring::ComputeRailwayRectangle(Region region, std::vector<std::v
 			railway_rect.vertical_line_para.b_min = (b_3 < b_4) ? b_3 : b_4;
 
 			//求指定延伸距离投影到坐标轴的长度（斜率为k_34,即b_34的范围延伸）
-			float delta_x = p1.x - p3.x;
-			float delta_y = p1.y - p3.y;
+			float delta_x = p1.x - p2.x;
+			float delta_y = p1.y - p2.y;
 			railway_rect.extend = fabs(region.distance*sqrt(delta_x*delta_x + delta_y*delta_y) / delta_y);
 
 			//计算轨道平面
 			railway_rect.plane_para.a = ((p2.y - p1.y)*(p3.z - p1.z) - (p2.z - p1.z)*(p3.y - p1.y));
 			railway_rect.plane_para.b = ((p2.z - p1.z)*(p3.x - p1.x) - (p2.x - p1.x)*(p3.z - p1.z));
 			railway_rect.plane_para.c = ((p2.x - p1.x)*(p3.y - p1.y) - (p2.y - p1.y)*(p3.x - p1.x));
-			railway_rect.plane_para.d =  - (railway_rect.plane_para.a*p1.x + railway_rect.plane_para.b*p1.y + railway_rect.plane_para.c*p1.z);
+			railway_rect.plane_para.d = -(railway_rect.plane_para.a*p1.x + railway_rect.plane_para.b*p1.y + railway_rect.plane_para.c*p1.z);
 
 			single_railway_rects.push_back(railway_rect);
 		}
